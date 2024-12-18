@@ -1,0 +1,8 @@
+#/bin/bash
+
+generator="Ninja"
+distdir="$(pwd)/dist"
+
+mkdir -p build && cd build || exit 1
+cmake -G $generator -DCMAKE_INSTALL_PREFIX=$distdir .. || exit 2
+

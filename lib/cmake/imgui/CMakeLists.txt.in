@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.13)
+
+project(imgui LANGUAGES CXX VERSION "@IMGUI_VERSION@")
+
+file(GLOB IMGUI_SRCS
+  "${CMAKE_CURRENT_LIST_DIR}/*.cpp")
+
+file(GLOB IMGUI_HEADERS
+  "${CMAKE_CURRENT_LIST_DIR}/*.h")
+
+file(GLOB IMGUI_BACKEND_SOURCES
+  "${CMAKE_CURRENT_LIST_DIR}/backends/*.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/backends/*.mm")
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+if(NOT DEFINED CACHE{IMGUI_TEST_FLAGS_INCLUDE_DIRS})
+  set(IMGUI_TEST_FLAGS_INCLUDE_DIRS "" CACHE INTERNAL "")
+endif()
+
+foreach(source ${IMGUI_BACKEND_SOURCES})
+  get_filename_component(basename "${source}" NAME_WE)
+
+  if(NOT DEFINED CACHE{${basename}_compiles})
+    try_compile(${basename}_compiles
+      SOURCES
+        "${source}"
+      CMAKE_FLAGS
+        "-DINCLUDE_DIRECTORIES=${CMAKE_CURRENT_LIST_DIR};${IMGUI_TEST_FLAGS_INCLUDE_DIRS}")
+  endif()
+
+  if(${basename}_compiles)
+    message(STATUS "${basename} compiles - yes")
+    string(REPLACE ".cpp" ".h" header ${source})
+    list(APPEND IMGUI_SUPPORTED_HEADERS ${header})
+    list(APPEND IMGUI_SUPPORTED_SRCS ${source})
+  else()
+    message(STATUS "${basename} compiles - no")
+  endif()
+endforeach()
+
+unset(CMAKE_TRY_COMPILE_TARGET_TYPE)
+
+add_library(imgui STATIC ${IMGUI_SRCS} ${IMGUI_HEADERS}
+  ${IMGUI_SUPPORTED_SRCS} ${IMGUI_SUPPORTED_HEADERS})
+
+target_include_directories(imgui
+  PUBLIC
+    "${CMAKE_CURRENT_LIST_DIR}/backends"
+    "${CMAKE_CURRENT_LIST_DIR}")
+
