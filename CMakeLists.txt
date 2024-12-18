@@ -11,7 +11,7 @@ add_subdirectory(src)
 
 target_link_libraries(minekraf
   PRIVATE
-    OpenGL::OpenGL
+    OpenGL::GL
     imgui
     SDL3::Headers
     SDL3::SDL3-static)
