@@ -20,5 +20,6 @@ fi
 
 mkdir -p build && cd build || exit 1
 cmake -G $generator $cmake_flags .. || exit 2
-cd .. && ln -s build/compile_commands.json compile_commands.json
-
+if [ ! -x ../compile_commands.json ]; then
+  cd .. && ln -s build/compile_commands.json compile_commands.json
+fi
