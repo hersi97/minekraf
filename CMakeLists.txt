@@ -9,18 +9,22 @@ add_subdirectory(lib)
 add_executable(minekraf)
 add_subdirectory(src)
 
+set_property(TARGET minekraf PROPERTY CXX_STANDARD 20)
+
 target_link_libraries(minekraf
   PRIVATE
     OpenGL::GL
     imgui
     SDL3::Headers
-    SDL3::SDL3-static)
+    SDL3::SDL3-static
+    spdlog::spdlog)
 
-if (MSVC AND CMAKE_EXPORT_COMPILE_COMMANDS)
+if(MSVC AND CMAKE_EXPORT_COMPILE_COMMANDS)
   # fake compile_commands.json generation from intermediate artifacts, since MSVC does not support it
   find_package(Python3 COMPONENTS Interpreter)
   add_custom_command(
     TARGET minekraf POST_BUILD
+    COMMENT "Generating compile_commands.json"
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_LIST_DIR}/script/generate_compile_commands.py" "${CMAKE_CURRENT_BINARY_DIR}"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json" "${CMAKE_CURRENT_LIST_DIR}/compile_commands.json"
     BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"

@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.10)
+project(spdlog-dl NONE)
+
+include(ExternalProject)
+ExternalProject_Add(spdlog
+  GIT_REPOSITORY "https://github.com/gabime/spdlog.git"
+  GIT_TAG "v1.x"
+  GIT_SHALLOW true
+  PREFIX "${SPDLOG_PREFIX}"
+  SOURCE_DIR "${SPDLOG_SOURCE_DIR}"
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  TEST_COMMAND "")

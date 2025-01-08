@@ -46,3 +46,15 @@ cmake_policy(SET CMP0079 NEW)
 target_link_libraries(imgui PRIVATE SDL3::Headers)
 cmake_policy(POP)
 
+# Download and unpack spdlog at configure time
+set(SPDLOG_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/spdlog-prefix")
+set(SPDLOG_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/spdlog")
+configure_file("cmake/spdlog-dl/CMakeLists.txt.in" "spdlog-dl/CMakeLists.txt")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/spdlog-dl")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build .
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/spdlog-dl")
+
+add_subdirectory(spdlog)
