@@ -37,7 +37,7 @@ spdlog::level::level_enum Logger::_to_spdlog_level(const LogLevel& level)
 
 Logger::Logger(const LogLevel& level) : _level(level)
 {
-  categories[CATEGORY_NONE] = {"app", LogLevel::info};
+  categories.emplace(CATEGORY_NONE, Category{"app", LogLevel::info});
 }
 
 Logger::~Logger()
@@ -101,6 +101,10 @@ void Logger::init_loggers(LoggerInitParams params)
     return;
   }
 
+  if (!spdlog::thread_pool()) {
+    spdlog::init_thread_pool(8192, 1);
+  }
+
   // Set init params
   initparams = std::move(params);
 
@@ -132,7 +136,7 @@ void Logger::reset_loggers()
   loggers.clear();
 }
 
-Logger& global()
+Logger& tedlhy::minekraf::logger::global()
 {
   static Logger _global_logger;
 

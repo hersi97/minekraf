@@ -1,6 +1,6 @@
 #pragma once
 
-#include <format>
+#include "spdlog/fmt/ostr.h"
 
 namespace tedlhy::minekraf::logger {
 struct LogLevel {
@@ -43,16 +43,9 @@ bool operator==(LogLevel::LogLevelEnum lhs, const LogLevel& rhs);
 bool operator<(LogLevel::LogLevelEnum lhs, const LogLevel& rhs);
 bool operator>(LogLevel::LogLevelEnum lhs, const LogLevel& rhs);
 
+std::ostream& operator<<(std::ostream& os, const LogLevel& level);
+
 }  // namespace tedlhy::minekraf::logger
 
-namespace std {
-using namespace tedlhy::minekraf::logger;
-
 template<>
-struct formatter<LogLevel> : formatter<std::string> {
-  auto format(const LogLevel& level, format_context& ctx) const
-  {
-    return formatter<std::string>::format(level, ctx);
-  }
-};
-}  // namespace std
+struct fmt::formatter<tedlhy::minekraf::logger::LogLevel> : fmt::ostream_formatter {};

@@ -53,6 +53,8 @@ LogLevel::operator std::string() const
   return level < _LogLevel_size ? LogLevelString[level] : "N/A";
 }
 
+namespace tedlhy::minekraf::logger {
+
 bool operator==(LogLevel::LogLevelEnum lhs, const LogLevel& rhs)
 {
   return rhs == lhs;
@@ -67,3 +69,10 @@ bool operator>(LogLevel::LogLevelEnum lhs, const LogLevel& rhs)
 {
   return rhs < lhs;
 }
+
+std::ostream& operator<<(std::ostream& os, const LogLevel& level)
+{
+  return os << static_cast<std::string>(level);
+}
+
+}  // namespace tedlhy::minekraf::logger

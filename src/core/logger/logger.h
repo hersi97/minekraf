@@ -14,6 +14,9 @@
 
 namespace tedlhy::minekraf::logger {
 
+template<typename... Args>
+using format_string_t = spdlog::format_string_t<Args...>;
+
 struct Category {
   std::string name;
   LogLevel level;
@@ -38,6 +41,8 @@ class Logger {
   std::mutex internalmutex;
 
   LoggerInitParams initparams;
+
+  CategoryKeyT last_category = CATEGORY_NONE;  // for log() warning spam avoidance
 
   static spdlog::level::level_enum _to_spdlog_level(const LogLevel& level);
 
@@ -107,13 +112,7 @@ public:
   void reset_loggers();
 
   template<typename... Args>
-  inline void log(const LogLevel level, std::format_string<Args...> fmt, Args&&... args)
-  {
-    log(CATEGORY_NONE, level, fmt, std::forward<Args>(args)...);
-  }
-
-  template<typename... Args>
-  inline void log(const CategoryKeyT category, const LogLevel level, std::format_string<Args...> fmt, Args&&... args)
+  inline void log(const CategoryKeyT category, const LogLevel level, format_string_t<Args...> fmt, Args&&... args)
   {
     if (level < _level) {
       return;
@@ -128,7 +127,6 @@ public:
       auto& def_logger = loggers.at(def_category.name);
 
       // check last warned category, eliminates most warning spam
-      static CategoryKeyT last_category = CATEGORY_NONE;
       if (category != last_category) {
         def_logger->warn("Logging category with index {} does not exist", category);
         last_category = category;
@@ -157,75 +155,165 @@ public:
   }
 
   template<typename... Args>
-  inline void trace(std::format_string<Args...> fmt, Args&&... args)
+  inline void log(const LogLevel level, format_string_t<Args...> fmt, Args&&... args)
   {
-    log(CATEGORY_NONE, LogLevel::trace, fmt, std::forward<Args>(args)...);
+    log(CATEGORY_NONE, level, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void log(const CategoryKeyT category, const LogLevel level, const T& msg)
+  {
+    log(category, level, "{}", msg);
+  }
+
+  template<typename T>
+  void log(const LogLevel level, const T& msg)
+  {
+    log(CATEGORY_NONE, level, "{}", msg);
   }
 
   template<typename... Args>
-  inline void trace(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  inline void trace(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
   {
     log(category, LogLevel::trace, fmt, std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void debug(std::format_string<Args...> fmt, Args&&... args)
+  inline void trace(format_string_t<Args...> fmt, Args&&... args)
   {
-    log(CATEGORY_NONE, LogLevel::debug, fmt, std::forward<Args>(args)...);
+    log(CATEGORY_NONE, LogLevel::trace, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void trace(const CategoryKeyT category, const T& msg)
+  {
+    log(category, LogLevel::trace, "{}", msg);
+  }
+
+  template<typename T>
+  void trace(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::trace, "{}", msg);
   }
 
   template<typename... Args>
-  inline void debug(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  inline void debug(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
   {
     log(category, LogLevel::debug, fmt, std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void info(std::format_string<Args...> fmt, Args&&... args)
+  inline void debug(format_string_t<Args...> fmt, Args&&... args)
   {
-    log(CATEGORY_NONE, LogLevel::info, fmt, std::forward<Args>(args)...);
+    log(CATEGORY_NONE, LogLevel::debug, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void debug(const CategoryKeyT category, const T& msg)
+  {
+    log(category, LogLevel::debug, "{}", msg);
+  }
+
+  template<typename T>
+  void debug(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::debug, "{}", msg);
   }
 
   template<typename... Args>
-  inline void info(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  inline void info(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
   {
     log(category, LogLevel::info, fmt, std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void warning(std::format_string<Args...> fmt, Args&&... args)
+  inline void info(format_string_t<Args...> fmt, Args&&... args)
   {
-    log(CATEGORY_NONE, LogLevel::warning, fmt, std::forward<Args>(args)...);
+    log(CATEGORY_NONE, LogLevel::info, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void info(const CategoryKeyT category, const T& msg)
+  {
+    log(category, LogLevel::info, "{}", msg);
+  }
+
+  template<typename T>
+  void info(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::info, "{}", msg);
   }
 
   template<typename... Args>
-  inline void warning(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  inline void warning(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
   {
     log(category, LogLevel::warning, fmt, std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void error(std::format_string<Args...> fmt, Args&&... args)
+  inline void warning(format_string_t<Args...> fmt, Args&&... args)
   {
-    log(CATEGORY_NONE, LogLevel::error, fmt, std::forward<Args>(args)...);
+    log(CATEGORY_NONE, LogLevel::warning, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void warning(const CategoryKeyT category, const T& msg)
+  {
+    log(category, LogLevel::warning, "{}", msg);
+  }
+
+  template<typename T>
+  void warning(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::warning, "{}", msg);
   }
 
   template<typename... Args>
-  inline void error(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  inline void error(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
   {
     log(category, LogLevel::error, fmt, std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void critical(std::format_string<Args...> fmt, Args&&... args)
+  inline void error(format_string_t<Args...> fmt, Args&&... args)
+  {
+    log(CATEGORY_NONE, LogLevel::error, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename T>
+  void error(const CategoryKeyT category, const T& msg)
+  {
+    log(category, LogLevel::error, "{}", msg);
+  }
+
+  template<typename T>
+  void error(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::error, "{}", msg);
+  }
+
+  template<typename... Args>
+  inline void critical(const CategoryKeyT category, format_string_t<Args...> fmt, Args&&... args)
+  {
+    log(category, LogLevel::critical, fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename... Args>
+  inline void critical(format_string_t<Args...> fmt, Args&&... args)
   {
     log(CATEGORY_NONE, LogLevel::critical, fmt, std::forward<Args>(args)...);
   }
 
-  template<typename... Args>
-  inline void critical(const CategoryKeyT category, std::format_string<Args...> fmt, Args&&... args)
+  template<typename T>
+  void critical(const CategoryKeyT category, const T& msg)
   {
-    log(category, LogLevel::critical, fmt, std::forward<Args>(args)...);
+    log(category, LogLevel::critical, "{}", msg);
+  }
+
+  template<typename T>
+  void critical(const T& msg)
+  {
+    log(CATEGORY_NONE, LogLevel::critical, "{}", msg);
   }
 };
 
