@@ -1,5 +1,12 @@
 #/bin/bash
 
+fail() {
+  local code=$1
+  shift
+  echo $@
+  exit $code
+}
+
 # generator="" # override cmake generator
 
 if [ -z "${generator+x}" ]; then
@@ -9,17 +16,11 @@ if [ -z "${generator+x}" ]; then
   fi
 fi
 
-distdir="$(pwd)/dist" # output directory for binaries and data
+srcdir="$(pwd)"
+bindir="$(pwd)/build"
 
-cmake_flags="-DCMAKE_INSTALL_PREFIX=$distdir"
-
-generate_compile_commands="yes" # set no to disable
-if [ "x$generate_compile_commands" == "xyes" ]; then
-  cmake_flags="${cmake_flags} -DCMAKE_EXPORT_COMPILE_COMMANDS=YES"
-fi
-
-mkdir -p build && cd build || exit 1
-cmake -G "$generator" $cmake_flags .. || exit 2
-if [ ! -x ../compile_commands.json ]; then
-  cd .. && ln -s build/compile_commands.json compile_commands.json
+mkdir -p "$bindir" || fail 1 "Could not create outut directory!"
+cmake -G "$generator" $@ -S "$srcdir" -B "$bindir" || fail 2 "CMake configuration failed!"
+if [ ! -e "$srcdir/compile_commands.json" ]; then
+  cd "$srcdir" && ln -s "$bindir/compile_commands.json" compile_commands.json
 fi
