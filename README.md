@@ -8,6 +8,9 @@ By default `cmake` is set up to configure and install git hooks if it recognises
 it is in a git repository, if you want to disable this behaviour, run the
 configure script with the `-DDISABLE_GIT_HOOKS` argument.
 
+For single configuration builds, you can set the build configuration with the
+`-DCMAKE_BUILD_TYPE=<configuration>` argument.
+
 ## BUILDING
 
 With Microsoft Visual Studio C/C++ (generator: Visual Studio 17 2022)  

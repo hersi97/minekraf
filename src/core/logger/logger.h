@@ -29,25 +29,32 @@ using CategoryValT = CategoryMap::value_type;
 static constexpr CategoryKeyT CATEGORY_NONE = 0;
 
 struct LoggerInitParams {
-  spdlog::async_overflow_policy policy = spdlog::async_overflow_policy::block;
+  LogLevel defaultlevel = LogLevel::info;
   std::string filepath = "log.txt";
+  spdlog::async_overflow_policy policy = spdlog::async_overflow_policy::block;
 };
 
 class Logger {
-  LogLevel _level;
-  CategoryMap categories;
-  std::vector<spdlog::sink_ptr> sinks;
-  std::map<std::string, std::shared_ptr<spdlog::logger>> loggers;
-  std::mutex internalmutex;
+  using SinkVector = std::vector<spdlog::sink_ptr>;
+  using LoggerMap = std::map<std::string, std::shared_ptr<spdlog::logger>>;
 
+  CategoryMap categories;
+  SinkVector sinks;
+  LoggerMap loggers;
+
+  LogLevel _level;
   LoggerInitParams initparams;
+
+  std::mutex mutex;
 
   CategoryKeyT last_category = CATEGORY_NONE;  // for log() warning spam avoidance
 
-  static spdlog::level::level_enum _to_spdlog_level(const LogLevel& level);
+  static spdlog::level::level_enum to_spdlog_level(const LogLevel& level);
+  std::optional<LoggerMap::iterator> create_logger_from_category(const Category& category);
 
 public:
-  Logger(const LogLevel& level = LogLevel::info);
+  Logger(LoggerInitParams params, std::initializer_list<CategoryMap::value_type> categories = {},
+    std::initializer_list<std::shared_ptr<spdlog::sinks::sink>> sinks = {});
   ~Logger();
 
   /// Set logging level
@@ -71,6 +78,14 @@ public:
   bool remove_category(CategoryKeyT idx);
 
   /**
+   * Set Category's minimum log level.
+   *
+   * This method returns true if change was successful, false if category was
+   * not found or otherwise.
+   */
+  bool set_category_level(CategoryKeyT idx, const LogLevel& level);
+
+  /**
    * Add logger sink.
    *
    * This method adds the provided sink to all initialized spdlog loggers.
@@ -89,28 +104,6 @@ public:
    */
   size_t remove_sink(size_t idx);
 
-  /**
-   * Initialize SpdlogWriter loggers
-   *
-   * This method creates an async spdlog logger for every category known at the
-   * time of calling this method. It also creates a default console out sink
-   * and a file sink. By default, the async policy set is to block on full
-   * message queue and the file sink is set to output to log.txt in the current
-   * working directory.
-   *
-   * If this log writer is already initialized, this method does nothing.
-   */
-  void init_loggers(LoggerInitParams params);
-
-  /**
-   * Reset loggers
-   *
-   * This method removes every logger from this instance. You can use this
-   * method to reinit the whole log writer by calling init_loggers() directly
-   * after.
-   */
-  void reset_loggers();
-
   template<typename... Args>
   inline void log(const CategoryKeyT category, const LogLevel level, format_string_t<Args...> fmt, Args&&... args)
   {
@@ -118,7 +111,7 @@ public:
       return;
     }
 
-    auto spdloglevel = _to_spdlog_level(level);
+    auto spdloglevel = to_spdlog_level(level);
 
     auto _category = categories.find(category);
     if (_category == categories.end()) {
@@ -139,16 +132,8 @@ public:
 
     auto _logger = loggers.find(_category->second.name);
     if (_logger == loggers.end()) {
-      const std::lock_guard<std::mutex> lock(internalmutex);
-
-      // category exists without a logger, create one in-place
-      auto logger = std::make_shared<spdlog::async_logger>(_category->second.name, sinks.begin(), sinks.end(),
-        spdlog::thread_pool(), initparams.policy);
-      logger->set_level(_to_spdlog_level(_category->second.level));
-      logger->trace("spdlog logger [{}] initialized", logger->name());
-      logger->log(spdloglevel, fmt, std::forward<Args>(args)...);
-      loggers[_category->second.name] = std::move(logger);
-      return;
+      throw std::runtime_error(
+        fmt::format("spdlog logger [{}] was not found, but it's category was", _category->second.name));
     }
 
     _logger->second->log(spdloglevel, fmt, std::forward<Args>(args)...);
@@ -318,8 +303,20 @@ public:
 };
 
 /**
- * Get global logger instance
+ * Set up default logger instance
+ *
+ * If the default logger instance is already initialized, this function will
+ * not reinitialize it.
+ *
+ * This function returns the default logger instance
  */
-Logger& global();
+Logger& init_default(LoggerInitParams params);
+
+/**
+ * Get default logger instance
+ *
+ * Attention: You must have called init_default() before
+ */
+Logger& get();
 
 }  // namespace tedlhy::minekraf::logger
