@@ -7,40 +7,20 @@
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_opengl.h"
 
+#include "core/app.h"
+
+using namespace tedlhy::minekraf;
+
 int main(int argc, char *argv[])
 {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    std::cerr << "Error initializing SDL3: " << SDL_GetError() << "\n";
-    return -1;
-  }
+  App &app = App::get();
+  app.run();
+  return 0;
+}
 
-  const char *glsl_version = "#version 130";
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-  SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-  SDL_Window *window = SDL_CreateWindow("Hello Minekraf", 1280, 720, window_flags);
-
-  if (!window) {
-    std::cerr << "Error in SDL_CreateWindow: " << SDL_GetError() << "\n";
-    return -2;
-  }
-
-  SDL_GLContext gl_ctx = SDL_GL_CreateContext(window);
-
-  if (!gl_ctx) {
-    std::cerr << "Error in SDL_GL_CreateContext: " << SDL_GetError() << "\n";
-    return -3;
-  }
-
-  SDL_GL_MakeCurrent(window, gl_ctx);
-  SDL_GL_SetSwapInterval(1);  // Vsync
-
+/*
+int main(int argc, char *argv[])
+{
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
@@ -102,9 +82,6 @@ int main(int argc, char *argv[])
   ImGui_ImplSDL3_Shutdown();
   ImGui::DestroyContext();
 
-  SDL_GL_DestroyContext(gl_ctx);
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-
   return 0;
 }
+*/
