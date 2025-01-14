@@ -191,7 +191,7 @@ Logger& init_default(LoggerInitParams param)
 
 Logger& get()
 {
-  assert(_global == nullptr && "Default logger is not initialized! Did you forget to call init_default()?");
+  assert(_global != nullptr && "Default logger is not initialized! Did you forget to call init_default()?");
 
   return *_global;
 }
