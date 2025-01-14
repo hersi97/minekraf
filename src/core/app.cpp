@@ -13,6 +13,11 @@
 
 using namespace tedlhy::minekraf;
 
+struct SDL_EventFilterCtx {
+  SDL_EventFilter filter = nullptr;
+  void* userdata = nullptr;
+} static _sdl_original_eventfilter;
+
 static logger::LogLevel _sdl_log_prio_to_lvl(SDL_LogPriority priority)
 {
   logger::LogLevel level = logger::LogLevel::info;
@@ -152,6 +157,8 @@ App::App() : running(false), window_mgr(), logger(), eventqueue(EventQueue::get(
     return event->type == SDL_EVENT_QUIT;
   };
 
+  // save original event filter and set ours
+  SDL_GetEventFilter(&_sdl_original_eventfilter.filter, &_sdl_original_eventfilter.userdata);
   SDL_SetEventFilter(callback_SDL_Event, &eventqueue);
 
   // Init SDL Logger
@@ -217,6 +224,12 @@ App& App::get()
 App::~App()
 {
   logger->trace("App::~App()");
+
+  // reset event filter to original
+  SDL_SetEventFilter(_sdl_original_eventfilter.filter, _sdl_original_eventfilter.userdata);
+
+  // reset log function
+  SDL_SetLogOutputFunction(SDL_GetDefaultLogOutputFunction(), nullptr);
 }
 
 void App::run()
