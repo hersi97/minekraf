@@ -50,7 +50,8 @@ class Logger {
   CategoryKeyT last_category = CATEGORY_NONE;  // for log() warning spam avoidance
 
   static spdlog::level::level_enum to_spdlog_level(const LogLevel& level);
-  std::optional<LoggerMap::iterator> create_logger_from_category(const Category& category);
+
+  std::optional<LoggerMap::iterator> _from_category_nolock(const Category& category);
 
 public:
   Logger(LoggerInitParams params, std::initializer_list<CategoryMap::value_type> categories = {},
@@ -121,7 +122,8 @@ public:
 
       // check last warned category, eliminates most warning spam
       if (category != last_category) {
-        def_logger->warn("Logging category with index {} does not exist", category);
+        def_logger->warn("Logger (@{:p}): Logging category with index {} does not exist", static_cast<void*>(this),
+          category);
         last_category = category;
       }
 
@@ -132,8 +134,8 @@ public:
 
     auto _logger = loggers.find(_category->second.name);
     if (_logger == loggers.end()) {
-      throw std::runtime_error(
-        fmt::format("spdlog logger [{}] was not found, but it's category was", _category->second.name));
+      throw std::runtime_error(fmt::format("Logger (@{:p}): spdlog logger [{}] was not found, but it's category was",
+        static_cast<void*>(this), _category->second.name));
     }
 
     _logger->second->log(spdloglevel, fmt, std::forward<Args>(args)...);
@@ -310,13 +312,23 @@ public:
  *
  * This function returns the default logger instance
  */
-Logger& init_default(LoggerInitParams params);
+std::shared_ptr<Logger> init_default(LoggerInitParams params);
+
+/**
+ * Set default logger instance
+ *
+ * Note: this will lead to the destruction of the previous default instance
+ * once all users of that logger release their lock on the shared pointer they
+ * stored with get(); in the case of a previous init_default() call, that
+ * logger instance will only be destructed at program exit
+ */
+void set(std::shared_ptr<Logger> logger);
 
 /**
  * Get default logger instance
  *
- * Attention: You must have called init_default() before
+ * Attention: You must have called init_default() or set() before
  */
-Logger& get();
+std::shared_ptr<Logger> get();
 
 }  // namespace tedlhy::minekraf::logger

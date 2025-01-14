@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "logger/logger.h"
 #include "window/windowmanager.h"
 #include "eventqueue.h"
@@ -10,6 +12,7 @@ class App {
   bool running;
 
   std::unique_ptr<WindowManager> window_mgr;
+  std::shared_ptr<logger::Logger> logger;
 
   EventQueue& eventqueue;
 

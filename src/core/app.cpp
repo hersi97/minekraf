@@ -69,7 +69,7 @@ void App::postUpdate(double deltatime)
   window_mgr->postUpdate(deltatime);
 }
 
-App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
+App::App() : running(false), window_mgr(), logger(), eventqueue(EventQueue::get())
 {
   std::atexit(SDL_Quit);  // register SDL_Quit on application exit
 
@@ -77,15 +77,16 @@ App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
 
   // Init default logger
 
-  auto& logger = logger::init_default({
+  logger = std::make_shared<logger::Logger>(logger::LoggerInitParams{
     .defaultlevel = logger::LogLevel::trace,
     .filepath = "log.txt",
   });
+  logger::set(logger);
 
   // Init SDL
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
-    logger.error("Error initializing SDL3 ({})", SDL_GetError());
+    logger->error("Error initializing SDL3 ({})", SDL_GetError());
     throw std::runtime_error("Error initializing SDL3");
   }
 
@@ -95,19 +96,19 @@ App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
     App* app = static_cast<App*>(categorydata);
     SDL_Event* eventdata = static_cast<SDL_Event*>(data);
 
-    auto& logger = logger::get();
-    logger.trace("sdl_app_exit_handler(): {{ event: {:#x}, &app: {:p}, &event->type: {:#x} }}", id, (void*)app,
+    auto logger = logger::get();
+    logger->trace("sdl_app_exit_handler(): {{ event: {:#x}, &app: {:p}, &event->type: {:#x} }}", id, (void*)app,
       eventdata->type);
 
     if (!app) {
       // something went horribly wrong
-      logger.critical("Failure to cast App data!");
+      logger->critical("Failure to cast App data!");
       throw std::runtime_error("Failure to cast App data");
     }
 
     if (!eventdata) {
       // something went horribly wrong
-      logger.critical("Failure to cast SDL_Event data!");
+      logger->critical("Failure to cast SDL_Event data!");
       throw std::runtime_error("Failure to cast SDL_Event data");
     }
 
@@ -116,7 +117,7 @@ App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
       case SDL_EVENT_TERMINATING:
         break;
       default:
-        logger.critical("{} is not a valid exit event id", id);
+        logger->critical("{} is not a valid exit event id", id);
         throw std::runtime_error("exit event handler called with invalid id");
     }
     app->exit();
@@ -137,16 +138,16 @@ App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
   auto callback_SDL_Event = [](void* userdata, SDL_Event* event) {
     EventQueue* eventqueue = static_cast<EventQueue*>(userdata);
 
-    auto& logger = logger::get();
+    auto logger = logger::get();
 
     if (!eventqueue) {
       // something went horribly wrong
-      logger.critical("Failure to cast EventQueue data!");
+      logger->critical("Failure to cast EventQueue data!");
       throw std::runtime_error("Failure to cast EventQueue data");
     }
 
     // copy event and store in event queue
-    logger.trace("callback_SDL_Event(): pushing event {:#x}", event->type);
+    logger->trace("callback_SDL_Event(): pushing event {:#x}", event->type);
     eventqueue->push_event(event->type, &event, sizeof(SDL_Event));
     return event->type == SDL_EVENT_QUIT;
   };
@@ -182,17 +183,17 @@ App::App() : running(false), window_mgr(), eventqueue(EventQueue::get())
     {SDL_LOG_CATEGORY_GPU, "gpu"},
   };
   for (const auto& [category, name] : names) {
-    if (!logger.insert_category(category, {name, _sdl_log_cat_to_lvl(category)})) {
+    if (!logger->insert_category(category, {name, _sdl_log_cat_to_lvl(category)})) {
       // maybe we already have a category like that, try setting category level
-      logger.set_category_level(category, _sdl_log_cat_to_lvl(category));
+      logger->set_category_level(category, _sdl_log_cat_to_lvl(category));
     }
   }
 
-  SDL_SetLogOutputFunction(logger_LogOutputFunction, static_cast<void*>(&logger));
+  SDL_SetLogOutputFunction(logger_LogOutputFunction, logger.get());
 
   // TODO: Add ImGui logger sink
 
-  logger.info("Yippie!");
+  logger->info("Yippie!");
 
   WindowManagerInitParams params{
     .title = "Minekraf",
@@ -215,8 +216,7 @@ App& App::get()
 
 App::~App()
 {
-  logger::get().trace("App::~App()");
-  SDL_Quit();
+  logger->trace("App::~App()");
 }
 
 void App::run()
@@ -226,7 +226,7 @@ void App::run()
     const auto steady_clock_period = steady_clock::duration{1};
     const auto millisecond = milliseconds{1};
     if (steady_clock_period > millisecond) {
-      logger::get().warning(
+      logger->warning(
         "steady_clock has a clock period of {}, which is longer than the recommended {}, "
         "frame timing might be imprecise",
         steady_clock_period, millisecond);

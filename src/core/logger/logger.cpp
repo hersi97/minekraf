@@ -35,12 +35,12 @@ spdlog::level::level_enum Logger::to_spdlog_level(const LogLevel& level)
   return spdlevel;
 }
 
-std::optional<Logger::LoggerMap::iterator> Logger::create_logger_from_category(const Category& category)
+std::optional<Logger::LoggerMap::iterator> Logger::_from_category_nolock(const Category& category)
 {
   auto logger = std::make_shared<spdlog::async_logger>(category.name, sinks.begin(), sinks.end(), spdlog::thread_pool(),
     initparams.policy);
   logger->set_level(to_spdlog_level(category.level));
-  logger->trace("spdlog logger [{}] initialized", logger->name());
+  logger->trace("Logger (@{:p}): spdlog logger [{}] initialized", static_cast<void*>(this), logger->name());
   auto [element, success] = loggers.emplace(category.name, std::move(logger));
   if (success) {
     return element;
@@ -48,7 +48,7 @@ std::optional<Logger::LoggerMap::iterator> Logger::create_logger_from_category(c
   // try to log warning about failure
   if (auto _def_cat = this->categories.find(CATEGORY_NONE); _def_cat != this->categories.end()) {
     if (auto _def_logger = loggers.find(_def_cat->second.name); _def_logger != loggers.end()) {
-      _def_logger->second->warn("Could not create logger {}", category.name);
+      _def_logger->second->warn("Could not register logger {}: a logger with this name already exists", category.name);
     }
   }
   return {};
@@ -74,18 +74,21 @@ Logger::Logger(LoggerInitParams params, std::initializer_list<CategoryMap::value
 
   // Create loggers for categories
   for (const auto& [_, category] : this->categories) {
-    create_logger_from_category(category);
+    _from_category_nolock(category);
   }
+
+  trace("Logger::Logger() @{:p}", static_cast<void*>(this));
 }
 
 Logger::~Logger()
 {
+  trace("Logger::~Logger() @{:p}", static_cast<void*>(this));
 }
 
 void Logger::level(const LogLevel& level)
 {
   const std::lock_guard lock(mutex);
-  trace("Setting logger level to: {}", level);
+  trace("Logger (@{:p}): Setting logger level to: {}", static_cast<void*>(this), level);
   _level = level;
 }
 
@@ -101,7 +104,9 @@ bool Logger::insert_category(CategoryKeyT idx, Category&& category)
   auto [_category, success] = categories.emplace(idx, std::move(category));
   if (success) {
     // create logger for the category
-    create_logger_from_category(_category->second);
+    if (!_from_category_nolock(_category->second)) {
+      return false;
+    }
   }
   return success;
 }
@@ -122,7 +127,7 @@ bool Logger::remove_category(CategoryKeyT idx)
 
   // try to remove logger as well
   if (auto _logger = loggers.find(_category->second.name); _logger != loggers.end()) {
-    _logger->second->debug("removing spdlog logger [{}]", _logger->first);
+    _logger->second->debug("Logger (@{:p}): removing spdlog logger [{}]", static_cast<void*>(this), _logger->first);
     loggers.erase(_logger);
   }
 
@@ -167,9 +172,9 @@ size_t Logger::remove_sink(size_t idx)
   for (auto& [name, logger] : loggers) {
     auto& loggersinks = logger->sinks();
     if (idx >= loggersinks.size()) {
-      throw std::runtime_error(
-        fmt::format("tried removing logger sink index {}, but spdlog logger [{}] sinks container has size {}", idx,
-          name, loggersinks.size()));
+      throw std::runtime_error(fmt::format(
+        "Logger (@{:p}): tried removing logger sink index {}, but spdlog logger [{}] sinks container has size {}",
+        static_cast<void*>(this), idx, name, loggersinks.size()));
     }
     loggersinks.erase(loggersinks.begin() + idx);
   }
@@ -179,20 +184,28 @@ size_t Logger::remove_sink(size_t idx)
 
 namespace tedlhy::minekraf::logger {
 
-static std::unique_ptr<Logger> _global;
+static std::weak_ptr<Logger> _global;
 
-Logger& init_default(LoggerInitParams param)
+std::shared_ptr<Logger> init_default(LoggerInitParams param)
 {
-  if (!_global) {
-    _global = std::make_unique<Logger>(param);
+  static std::shared_ptr<Logger> _default;
+  if (!_global.expired()) {
+    _default = std::make_shared<Logger>(param);
+    _global = _default;
   }
-  return *_global;
+  return _global.lock();
 }
 
-Logger& get()
+void set(std::shared_ptr<Logger> logger)
 {
-  assert(_global != nullptr && "Default logger is not initialized! Did you forget to call init_default()?");
-
-  return *_global;
+  _global = logger;
 }
+
+std::shared_ptr<Logger> get()
+{
+  assert(!_global.expired() && "Default logger is not initialized! Did you forget to call init_default()?");
+
+  return _global.lock();
+}
+
 }  // namespace tedlhy::minekraf::logger
