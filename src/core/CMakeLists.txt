@@ -4,3 +4,4 @@ target_sources(minekraf PRIVATE
 )
 
 add_subdirectory(logger)
+add_subdirectory(window)
