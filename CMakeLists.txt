@@ -29,8 +29,6 @@ find_package(OpenGL REQUIRED)
 add_subdirectory(lib)
 
 add_executable(minekraf)
-add_subdirectory(src)
-
 set_property(TARGET minekraf PROPERTY CXX_STANDARD 20)
 
 target_link_libraries(minekraf
@@ -40,6 +38,8 @@ target_link_libraries(minekraf
     SDL3::Headers
     SDL3::SDL3-static
     spdlog::spdlog)
+
+add_subdirectory(src)
 
 if(MSVC AND CMAKE_EXPORT_COMPILE_COMMANDS)
   # fake compile_commands.json generation from intermediate artifacts,

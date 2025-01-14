@@ -1,0 +1,11 @@
+#pragma once
+
+#include <cmath>
+#include <charconv>
+
+namespace tedlhy::minekraf {
+
+constexpr unsigned char version[] = {@CMAKE_PROJECT_VERSION_MAJOR@, @CMAKE_PROJECT_VERSION_MINOR@, @CMAKE_PROJECT_VERSION_PATCH@};
+constexpr const char* versionstr = "@CMAKE_PROJECT_VERSION@@COMMIT_ID@";
+
+}  // namespace tedlhy::minekraf
