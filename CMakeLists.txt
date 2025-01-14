@@ -29,8 +29,13 @@ find_package(OpenGL REQUIRED)
 add_subdirectory(lib)
 
 add_executable(minekraf)
-set_property(TARGET minekraf PROPERTY CXX_STANDARD 20)
-
+set_target_properties(minekraf PROPERTIES CXX_STANDARD 20)
+if(MSVC)
+  target_compile_options(minekraf PRIVATE "/W4")
+else()
+  target_compile_options(minekraf PRIVATE
+    "-Wall" "-Wextra" "-Wpedantic")
+endif()
 target_link_libraries(minekraf
   PRIVATE
     OpenGL::GL
